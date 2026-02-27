@@ -11,19 +11,36 @@
 
 	let { data } = $props();
 
-	let title = $derived(data.article?.title ?? '');
-	let slug = $derived(data.article?.slug ?? '');
-	let content = $derived(data.article?.content ?? '');
-	let excerpt = $derived(data.article?.excerpt ?? '');
-	let featured_image = $derived(data.article?.featured_image ?? '');
-	let is_published = $derived(data.article?.is_published ?? false);
-	let selectedCategories = $derived<number[]>(
-		data.article?.article_categories?.map((c: any) => c.category_id) ?? []
-	);
-	let selectedTags = $derived<number[]>(data.article?.article_tags?.map((t: any) => t.tag_id) ?? []);
+	let title = $state('');
+	let slug = $state('');
+	let content = $state('');
+	let excerpt = $state('');
+	let featured_image = $state('');
+	let is_published = $state(false);
+	let meta_title = $state('');
+	let meta_description = $state('');
+	let meta_image = $state('');
+	let selectedCategories = $state<number[]>([]);
+	let selectedTags = $state<number[]>([]);
 
-	let showTrashDialog = $derived(false);
-	let saving = $derived(false);
+	$effect(() => {
+		if (data.article) {
+			title = data.article.title ?? '';
+			slug = data.article.slug ?? '';
+			content = data.article.content ?? '';
+			excerpt = data.article.excerpt ?? '';
+			featured_image = data.article.featured_image ?? '';
+			is_published = data.article.is_published ?? false;
+			meta_title = data.article.meta_title ?? '';
+			meta_description = data.article.meta_description ?? '';
+			meta_image = data.article.meta_image ?? '';
+			selectedCategories = data.article.article_categories?.map((c: any) => c.category_id) ?? [];
+			selectedTags = data.article.article_tags?.map((t: any) => t.tag_id) ?? [];
+		}
+	});
+
+	let showTrashDialog = $state(false);
+	let saving = $state(false);
 
 	function generateSlug(text: string): string {
 		return text
@@ -34,12 +51,15 @@
 			.replace(/^-+|-+$/g, '');
 	}
 
+	$effect(() => {
+		if (title && (!slug || slug === generateSlug(slug))) {
+			slug = generateSlug(title);
+		}
+	});
+
 	function handleTitleInput(e: Event) {
 		const target = e.target as HTMLInputElement;
 		title = target.value;
-		if (!slug || slug === generateSlug(slug)) {
-			slug = generateSlug(title);
-		}
 	}
 
 	async function handleSubmit(e: Event) {
@@ -63,7 +83,12 @@
 
 			if (response.ok) {
 				goto('/admin/articles');
+			} else {
+				const result = await response.json();
+				alert(result.message || 'Failed to save article');
 			}
+		} catch (err) {
+			alert('Failed to save article');
 		} finally {
 			saving = false;
 		}
@@ -152,6 +177,47 @@
 		<div class="space-y-2">
 			<Label>Content</Label>
 			<Editor {content} onchange={(html) => (content = html)} />
+		</div>
+
+		<div class="space-y-4 rounded-lg border p-4">
+			<h3 class="text-lg font-semibold">SEO Settings</h3>
+
+			<div class="space-y-2">
+				<Label for="meta_title">Meta Title</Label>
+				<Input
+					id="meta_title"
+					name="meta_title"
+					value={meta_title}
+					oninput={(e) => (meta_title = (e.target as HTMLInputElement).value)}
+					placeholder={title || 'Page title'}
+				/>
+				<p class="text-sm text-muted-foreground">Leave empty to use article title</p>
+			</div>
+
+			<div class="space-y-2">
+				<Label for="meta_description">Meta Description</Label>
+				<Textarea
+					id="meta_description"
+					name="meta_description"
+					value={meta_description}
+					oninput={(e) => (meta_description = (e.target as HTMLTextAreaElement).value)}
+					placeholder={excerpt || 'Page description'}
+					rows={2}
+				/>
+				<p class="text-sm text-muted-foreground">Leave empty to use article excerpt</p>
+			</div>
+
+			<div class="space-y-2">
+				<Label for="meta_image">Meta Image URL</Label>
+				<Input
+					id="meta_image"
+					name="meta_image"
+					value={meta_image}
+					oninput={(e) => (meta_image = (e.target as HTMLInputElement).value)}
+					placeholder={featured_image || 'https://example.com/image.jpg'}
+				/>
+				<p class="text-sm text-muted-foreground">Leave empty to use featured image</p>
+			</div>
 		</div>
 
 		<div class="grid gap-6 md:grid-cols-2">

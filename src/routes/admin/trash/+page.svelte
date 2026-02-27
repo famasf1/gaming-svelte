@@ -33,9 +33,18 @@
 		formData.append('type', itemType);
 		formData.append('id', itemId.toString());
 
-		await fetch('/admin/trash?/restore', { method: 'POST', body: formData });
-		showRestoreDialog = false;
-		window.location.reload();
+		const response = await fetch('/admin/trash?/restore', {
+			method: 'POST',
+			body: formData,
+			credentials: 'include'
+		});
+		if (response.ok) {
+			showRestoreDialog = false;
+			window.location.reload();
+		} else {
+			const result = await response.json();
+			alert(result.message || 'Failed to restore item');
+		}
 	}
 
 	async function handlePurge() {
@@ -44,9 +53,18 @@
 		formData.append('type', itemType);
 		formData.append('id', itemId.toString());
 
-		await fetch('/admin/trash?/purge', { method: 'POST', body: formData });
-		showPurgeDialog = false;
-		window.location.reload();
+		const response = await fetch('/admin/trash?/purge', {
+			method: 'POST',
+			body: formData,
+			credentials: 'include'
+		});
+		if (response.ok) {
+			showPurgeDialog = false;
+			window.location.reload();
+		} else {
+			const result = await response.json();
+			alert(result.message || 'Failed to delete item permanently');
+		}
 	}
 
 	const hasItems = $derived(

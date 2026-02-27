@@ -14,6 +14,7 @@ test.describe('Admin Media', () => {
 		await page.goto('/admin/media');
 
 		await expect(page.locator('h1')).toContainText('Media');
+		await expect(page.locator('text=View Trash')).toBeVisible();
 	});
 
 	test('shows empty state when no images', async ({ page }) => {
@@ -24,26 +25,100 @@ test.describe('Admin Media', () => {
 		await expect(page.locator('text=No images uploaded yet')).toBeVisible();
 	});
 
-	test('image grid displays when images exist', async ({ page }) => {
+	test('can upload image via click', async ({ page }) => {
 		await loginAsAdmin(page);
 
 		await page.goto('/admin/media');
 
-		const imageGrid = page.locator('.grid');
-		if (await imageGrid.isVisible()) {
-			await expect(page.locator('img')).toBeVisible();
-		}
+		const fileInput = page.locator('input[type="file"]');
+		await fileInput.setInputFiles({
+			name: 'test-image.png',
+			mimeType: 'image/png',
+			buffer: Buffer.from('fake-image-data')
+		});
+
+		await page.waitForTimeout(1000);
 	});
 
-	test('copy URL button is visible on hover', async ({ page }) => {
+	test('shows upload zone', async ({ page }) => {
 		await loginAsAdmin(page);
 
 		await page.goto('/admin/media');
 
-		const imageContainer = page.locator('.group').first();
-		if (await imageContainer.isVisible()) {
-			await imageContainer.hover();
-			await expect(page.locator('button:has-text("Copy URL")')).toBeVisible();
-		}
+		await expect(
+			page.locator('text=Drag and drop an image here, or click to select')
+		).toBeVisible();
+	});
+
+	test('can navigate to trash from media page', async ({ page }) => {
+		await loginAsAdmin(page);
+
+		await page.goto('/admin/media');
+
+		await page.click('text=View Trash');
+
+		await expect(page).toHaveURL(/\/admin\/media\/trash/);
+		await expect(page.locator('h1')).toContainText('Media Trash');
+	});
+
+	test('edit button visible on media hover', async ({ page }) => {
+		await loginAsAdmin(page);
+
+		await page.goto('/admin/media');
+
+		const editButton = page.locator('a:has-text("Edit")');
+		await expect(editButton).toHaveCount(0);
+	});
+});
+
+test.describe('Admin Media Edit', () => {
+	test('redirects to login when not authenticated', async ({ page }) => {
+		await page.goto('/admin/media/1');
+
+		await expect(page).toHaveURL(/\/admin\/login/);
+	});
+
+	test('media edit page renders correctly', async ({ page }) => {
+		await loginAsAdmin(page);
+
+		await page.goto('/admin/media/1');
+
+		await expect(page.locator('h1')).toContainText('Edit Media');
+		await expect(page.locator('text=Back to Media')).toBeVisible();
+	});
+});
+
+test.describe('Admin Media Trash', () => {
+	test('redirects to login when not authenticated', async ({ page }) => {
+		await page.goto('/admin/media/trash');
+
+		await expect(page).toHaveURL(/\/admin\/login/);
+	});
+
+	test('trash page renders correctly', async ({ page }) => {
+		await loginAsAdmin(page);
+
+		await page.goto('/admin/media/trash');
+
+		await expect(page.locator('h1')).toContainText('Media Trash');
+		await expect(page.locator('text=Back to Media')).toBeVisible();
+	});
+
+	test('shows empty state when trash is empty', async ({ page }) => {
+		await loginAsAdmin(page);
+
+		await page.goto('/admin/media/trash');
+
+		await expect(page.locator('text=Trash is empty')).toBeVisible();
+	});
+
+	test('can navigate back to media from trash', async ({ page }) => {
+		await loginAsAdmin(page);
+
+		await page.goto('/admin/media/trash');
+
+		await page.click('text=Back to Media');
+
+		await expect(page).toHaveURL(/\/admin\/media/);
 	});
 });

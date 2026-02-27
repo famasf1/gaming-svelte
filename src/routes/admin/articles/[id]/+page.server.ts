@@ -47,6 +47,9 @@ export const actions: Actions = {
 		const excerpt = formData.get('excerpt') as string;
 		const featured_image = formData.get('featured_image') as string;
 		const is_published = formData.get('is_published') === 'on';
+		const meta_title = formData.get('meta_title') as string;
+		const meta_description = formData.get('meta_description') as string;
+		const meta_image = formData.get('meta_image') as string;
 		const categoryIds = formData.getAll('categories').map(Number);
 		const tagIds = formData.getAll('tags').map(Number);
 
@@ -56,6 +59,18 @@ export const actions: Actions = {
 
 		const { supabase } = locals;
 
+		let slugQuery = supabase.from('articles').select('id').eq('slug', slug).is('deleted_at', null);
+
+		if (params.id) {
+			slugQuery = slugQuery.neq('id', Number(params.id));
+		}
+
+		const { data: existingSlug } = await slugQuery.maybeSingle();
+
+		if (existingSlug) {
+			return fail(400, { message: 'Slug already exists. Please use a different slug.' });
+		}
+
 		const articleData = {
 			title,
 			slug,
@@ -63,8 +78,11 @@ export const actions: Actions = {
 			excerpt: excerpt || null,
 			featured_image: featured_image || null,
 			is_published,
-			published_at: is_published ? new Date().toISOString() : null,
 			author_id: locals.user?.id,
+			meta_title: meta_title || null,
+			meta_description: meta_description || null,
+			meta_image: meta_image || null,
+			...(is_published ? { published_at: new Date().toISOString() } : {}),
 			...(params.id ? {} : { created_at: new Date().toISOString() })
 		};
 

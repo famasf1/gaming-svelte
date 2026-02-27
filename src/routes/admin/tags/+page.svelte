@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -10,49 +11,62 @@
 	let name = $state('');
 	let showTrashDialog = $state(false);
 	let deleteId = $state<number | null>(null);
+	let formLoading = $state(false);
+	let deleteLoading = $state(false);
 
 	function openCreateForm() {
 		showForm = true;
 		name = '';
 	}
 
-	async function handleSubmit(e: Event) {
-		e.preventDefault();
-		const form = e.target as HTMLFormElement;
-		const formData = new FormData(form);
-
-		await fetch('/admin/tags?/create', {
-			method: 'POST',
-			body: formData
-		});
-
-		showForm = false;
-		window.location.reload();
-	}
-
-	async function handleDelete() {
-		if (!deleteId) return;
-		const formData = new FormData();
-		formData.append('id', deleteId.toString());
-
-		await fetch('/admin/tags?/delete', {
-			method: 'POST',
-			body: formData
-		});
-
+	function handleDelete() {
 		showTrashDialog = false;
-		window.location.reload();
+		document.getElementById('delete-form')?.requestSubmit();
 	}
 </script>
 
 <div class="space-y-6">
+	<form
+		id="delete-form"
+		method="POST"
+		action="?/delete"
+		use:enhance={() => {
+			deleteLoading = true;
+			return async ({ result }) => {
+				deleteLoading = false;
+				if (result.type === 'success') {
+					window.location.reload();
+				} else if (result.type === 'failure') {
+					alert(result.data?.message || 'Failed to delete tag');
+				}
+			};
+		}}
+	>
+		<input type="hidden" name="id" value={deleteId ?? ''} />
+	</form>
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Tags</h1>
 		<Button onclick={openCreateForm}>New Tag</Button>
 	</div>
 
 	{#if showForm}
-		<form onsubmit={handleSubmit} class="space-y-4 rounded-lg border p-4">
+		<form
+			method="POST"
+			action="?/create"
+			use:enhance={() => {
+				formLoading = true;
+				return async ({ result }) => {
+					formLoading = false;
+					if (result.type === 'success') {
+						showForm = false;
+						window.location.reload();
+					} else if (result.type === 'failure') {
+						alert(result.data?.message || 'Failed to save tag');
+					}
+				};
+			}}
+			class="space-y-4 rounded-lg border p-4"
+		>
 			<h2 class="text-lg font-semibold">New Tag</h2>
 
 			<div class="space-y-2">
@@ -61,7 +75,7 @@
 			</div>
 
 			<div class="flex gap-2">
-				<Button type="submit">Save</Button>
+				<Button type="submit" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save'}</Button>
 				<Button type="button" variant="outline" onclick={() => (showForm = false)}>Cancel</Button>
 			</div>
 		</form>

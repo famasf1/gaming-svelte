@@ -15,13 +15,19 @@
 		const formData = new FormData();
 		formData.append('id', deleteId.toString());
 
-		await fetch('/admin/pages?/delete', {
+		const response = await fetch('/admin/pages?/delete', {
 			method: 'POST',
-			body: formData
+			body: formData,
+			credentials: 'include'
 		});
 
-		showTrashDialog = false;
-		window.location.reload();
+		if (response.ok) {
+			showTrashDialog = false;
+			window.location.reload();
+		} else {
+			const result = await response.json();
+			alert(result.message || 'Failed to delete page');
+		}
 	}
 </script>
 
